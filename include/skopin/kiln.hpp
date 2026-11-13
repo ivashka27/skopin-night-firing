@@ -64,8 +64,14 @@ public:
     void unload(const std::string& mark);
 
 private:
-    // Поля и приватные методы добавляйте здесь.
-    // Публичные сигнатуры выше менять нельзя: тесты собираются против них.
+    Cone cone_ = Cone::Cold;
+    Door door_ = Door::Closed;
+    int stokes_ = 0;
+    std::vector<Ware> stack_;
+
+    // После выхода на поливной конус все поливы в стопке считаются обожжёнными.
+    // Необожжённые поливы могут появиться только выше тех, что уже обожглись.
+    std::vector<Ware>::size_type pendingGlazes_ = 0;
 };
 
 }  // namespace skopin

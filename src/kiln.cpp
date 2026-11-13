@@ -1,56 +1,128 @@
 #include "skopin/kiln.hpp"
 
-#include <stdexcept>
-
 namespace skopin {
 
-Kiln::Kiln() {
-    throw std::logic_error("Kiln: реализуйте");
-}
+Kiln::Kiln() = default;
 
 Cone Kiln::cone() const {
-    throw std::logic_error("Kiln::cone: реализуйте");
+    return cone_;
 }
 
 Door Kiln::door() const {
-    throw std::logic_error("Kiln::door: реализуйте");
+    return door_;
 }
 
 int Kiln::stokes() const {
-    throw std::logic_error("Kiln::stokes: реализуйте");
+    return stokes_;
 }
 
 std::vector<Ware> Kiln::stack() const {
-    throw std::logic_error("Kiln::stack: реализуйте");
+    return stack_;
 }
 
 void Kiln::open() {
-    // Повторное открытие и открытие на поливном конусе — KilnError.
-    throw std::logic_error("Kiln::open: реализуйте");
+    if (door_ == Door::Open) {
+        throw KilnError("Дверца уже открыта");
+    }
+    if (cone_ == Cone::Glaze) {
+        throw KilnError("На поливном конусе дверцу открыть нельзя");
+    }
+    door_ = Door::Open;
 }
 
 void Kiln::close() {
-    throw std::logic_error("Kiln::close: реализуйте");
+    if (door_ == Door::Closed) {
+        throw KilnError("Дверца уже закрыта");
+    }
+    door_ = Door::Closed;
 }
 
 void Kiln::fire() {
-    // Отказ не тратит такт и не поднимает конус наполовину.
-    throw std::logic_error("Kiln::fire: реализуйте");
+    if (door_ == Door::Open) {
+        throw KilnError("Для нагрева закройте дверцу");
+    }
+    if (cone_ == Cone::Glaze) {
+        throw KilnError("Горн уже на поливном конусе");
+    }
+    for (const Ware& ware : stack_) {
+        if (ware.thickness_mm > kCrackThicknessMm) {
+            throw KilnError("Слишком толстая стенка изделия");
+        }
+        if (cone_ == Cone::Bisque && ware.program == Program::Bisque) {
+            throw KilnError("Утиль нельзя нагревать до поливного конуса");
+        }
+    }
+
+    if (cone_ == Cone::Cold) {
+        cone_ = Cone::Bisque;
+    } else {
+        cone_ = Cone::Glaze;
+        pendingGlazes_ = 0;
+    }
+    ++stokes_;
 }
 
 void Kiln::cool() {
-    // Ровно один конус вниз. Полива, не видевшая поливного огня, остыть не даёт.
-    throw std::logic_error("Kiln::cool: реализуйте");
+    if (door_ == Door::Open) {
+        throw KilnError("Для охлаждения закройте дверцу");
+    }
+    if (cone_ == Cone::Cold) {
+        throw KilnError("Горн уже холодный");
+    }
+    if (cone_ == Cone::Bisque && pendingGlazes_ != 0) {
+        throw KilnError("Сначала поднимите поливу до поливного конуса");
+    }
+
+    cone_ = cone_ == Cone::Glaze ? Cone::Bisque : Cone::Cold;
+    ++stokes_;
 }
 
-void Kiln::load(const Ware&) {
-    // Внутри должна оказаться копия. Дверцу load сам не открывает.
-    throw std::logic_error("Kiln::load: реализуйте");
+void Kiln::load(const Ware& ware) {
+    if (door_ == Door::Closed) {
+        throw KilnError("Для загрузки откройте дверцу");
+    }
+    if (cone_ == Cone::Bisque && ware.program != Program::Glaze) {
+        throw KilnError("В горячий горн можно загрузить только поливу");
+    }
+    if (const auto error = validateWare(ware)) {
+        throw KilnError(*error);
+    }
+    for (const Ware& loaded : stack_) {
+        if (loaded.mark == ware.mark) {
+            throw KilnError("Изделие с таким клеймом уже в горне");
+        }
+    }
+    if (!stack_.empty() &&
+        (ware.kind == WareKind::Sagger || stack_.front().kind == WareKind::Sagger)) {
+        throw KilnError("Капсель занимает горн целиком");
+    }
+    if (!fitsInKiln(stack_, ware)) {
+        throw KilnError("Изделие не помещается по высоте");
+    }
+
+    stack_.push_back(ware);
+    if (ware.program == Program::Glaze) {
+        ++pendingGlazes_;
+    }
 }
 
-void Kiln::unload(const std::string&) {
-    // Снимается только верх стопки. Поливу с утильного конуса не снимают.
-    throw std::logic_error("Kiln::unload: реализуйте");
+void Kiln::unload(const std::string& mark) {
+    if (door_ == Door::Closed) {
+        throw KilnError("Для снятия откройте дверцу");
+    }
+    if (stack_.empty() || stack_.back().mark != mark) {
+        throw KilnError("Снять можно только верхнее изделие");
+    }
+
+    if (stack_.back().program == Program::Glaze) {
+        if (cone_ != Cone::Cold) {
+            throw KilnError("Поливу можно снять только из холодного горна");
+        }
+        if (pendingGlazes_ != 0) {
+            --pendingGlazes_;
+        }
+    }
+    stack_.pop_back();
 }
 
 }  // namespace skopin
