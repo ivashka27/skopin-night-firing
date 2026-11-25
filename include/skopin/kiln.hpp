@@ -64,8 +64,11 @@ public:
     void unload(const std::string& mark);
 
 private:
-    // Поля и приватные методы добавляйте здесь.
-    // Публичные сигнатуры выше менять нельзя: тесты собираются против них.
+    Cone c;
+    Door d;
+    int t;
+    std::vector<Ware> s;
+    std::vector<int> b;
 };
 
 }  // namespace skopin
