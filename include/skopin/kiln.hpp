@@ -64,8 +64,12 @@ public:
     void unload(const std::string& mark);
 
 private:
-    // Поля и приватные методы добавляйте здесь.
-    // Публичные сигнатуры выше менять нельзя: тесты собираются против них.
+    Cone _coneConditional = Cone::Cold;
+    Door _doorConditional = Door::Closed;
+    int _stokes = 0;
+
+    std::vector<Ware> _stack;
+    std::vector<bool> _deified;
 };
 
 }  // namespace skopin
