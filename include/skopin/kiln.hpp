@@ -64,7 +64,11 @@ public:
     void unload(const std::string& mark);
 
 private:
-    // Поля и приватные методы добавляйте здесь.
+    Cone cur_cone;
+    Door cur_door;
+    int cur_stokes;
+    std::vector<Ware> wares;
+    std::vector<std::string> glaze_reached_marks;
     // Публичные сигнатуры выше менять нельзя: тесты собираются против них.
 };
 
